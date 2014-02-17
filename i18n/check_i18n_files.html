@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Check i18n files</title>
+</head>
+<body>
+	<form>
+		<label for="language">
+			language
+		</label>
+		<input type="text" id="language" title="Put language code you want to check (e.g. cs, en, fr, it)" placeholder="language code (e.g. en)">
+		<input type="submit" value="Check">
+	</form>
+	<fieldset>
+		<legend>Comparison</legend>
+		<p id="message">Enter a language code, to compare the translation file of this language to the template file (en).</p>
+		<ul id="difference"></ul>
+	</fieldset>
+
+	<script>
+		var elemLanguage = document.getElementById('language'),
+			elemMsg = document.getElementById('message'),
+			elemDiff = document.getElementById('difference'),
+			elemForce = document.getElementById('forceReload');
+
+		elemLanguage.parentNode.onsubmit = function(e) {
+			e.preventDefault();
+
+			var lng = elemLanguage.value,
+				scr = document.createElement('script');
+			
+			scr.src = './i18n.' + lng + '.js?'+Math.random(); //force the script to reload
+			scr.onerror =  scr.onload = function(){
+				compare(lng);
+				scr.parentNode.removeChild(scr);
+			};
+			WGo.i18n[lng] = null;
+
+			document.body.appendChild(scr);
+		};
+
+		var WGo = {i18n:{}},
+			reference;
+
+		function compare(lng) {
+			var diff = [],
+				warn = [],
+				en = WGo.i18n.en,
+				other = WGo.i18n[lng],
+				item, x;
+
+			elemDiff.innerHTML = "";
+
+			if(!other){
+				elemMsg.textContent = 'Sorry file i18n.' + lng + '.js does not exist or have errors.';
+				return;
+			}
+			
+			for(x in en){
+				if (en.hasOwnProperty(x)) {
+					item = other[x];
+					if(typeof item === 'undefined') {
+						diff.push(x);
+					} else if (!item && typeof item !== 'number') {
+						warn.push(x);
+					}
+				}
+			}
+
+			if (diff.length || warn.length) {
+				elemMsg.textContent = 'File i18n.' + lng + '.js is not up-to-date.';
+
+				item = document.createDocumentFragment();
+				
+				diff.forEach(function(name){
+					var li = document.createElement('li');
+					li.textContent = '"' + name + '" is missing.';
+					item.appendChild(li);
+				});
+				
+				warn.forEach(function(name){
+					var li = document.createElement('li');
+					li.textContent = '"' + name + '" exists but doesn\'t have translation.';
+					item.appendChild(li);
+				});
+				
+				elemDiff.appendChild(item);
+			} else {
+				elemMsg.textContent = 'File i18n.' + lng + '.js is up-to-date. All properties are defined and seems to be translated.';
+			}
+
+		}
+	</script>
+	<script src="./i18n.en.js"></script>
+</body>
+</html>
